@@ -16,6 +16,66 @@ import net.minecraft.util.BlockPos;
 public final class MovementUtils extends MinecraftInstance {
 
     /**
+     * Gets speed.
+     *
+     * @return the speed
+     */
+    public static float getSpeed() {
+        return (float) getSpeed(mc.thePlayer.motionX, mc.thePlayer.motionZ);
+    }
+
+    /**
+     * Gets speed.
+     *
+     * @param motionX the motion x
+     * @param motionZ the motion z
+     * @return the speed
+     */
+    public static double getSpeed(final double motionX, final double motionZ) {
+        return Math.sqrt(motionX * motionX + motionZ * motionZ);
+    }
+
+    /**
+     * Is on ice boolean.
+     *
+     * @return the boolean
+     */
+    public static boolean isOnIce() {
+        final EntityPlayerSP player = mc.thePlayer;
+        final Block blockUnder = mc.theWorld.getBlockState(new BlockPos(player.posX, player.posY - 1.0, player.posZ)).getBlock();
+        return blockUnder instanceof BlockIce || blockUnder instanceof BlockPackedIce;
+    }
+
+    public static void setSpeed(final double moveSpeed, float yaw, double strafe, double forward) {
+        if (forward != 0.0D) {
+            if (strafe > 0.0D) {
+                yaw += ((forward > 0.0D) ? -45 : 45);
+            } else if (strafe < 0.0D) {
+                yaw += ((forward > 0.0D) ? 45 : -45);
+            }
+            strafe = 0.0D;
+            if (forward > 0.0D) {
+                forward = 1.0D;
+            } else if (forward < 0.0D) {
+                forward = -1.0D;
+            }
+        }
+        if (strafe > 0.0D) {
+            strafe = 1.0D;
+        } else if (strafe < 0.0D) {
+            strafe = -1.0D;
+        }
+        final double mx = Math.cos(Math.toRadians((yaw + 90.0F)));
+        final double mz = Math.sin(Math.toRadians((yaw + 90.0F)));
+        mc.thePlayer.motionX = forward * moveSpeed * mx + strafe * moveSpeed * mz;
+        mc.thePlayer.motionZ = forward * moveSpeed * mz - strafe * moveSpeed * mx;
+    }
+
+    public static void setSpeed(final double moveSpeed) {
+        setSpeed(moveSpeed, mc.thePlayer.rotationYaw, mc.thePlayer.movementInput.moveStrafe, mc.thePlayer.movementInput.moveForward);
+    }
+
+    /**
      * Is block under boolean.
      *
      * @return the boolean
@@ -54,12 +114,83 @@ public final class MovementUtils extends MinecraftInstance {
     }
 
     /**
+     * Strafe.
+     */
+    public static void strafe() {
+        strafe(getSpeed());
+    }
+
+    /**
      * Is moving boolean.
      *
      * @return the boolean
      */
     public static boolean isMoving() {
         return mc.thePlayer != null && (mc.thePlayer.movementInput.moveForward != 0F || mc.thePlayer.movementInput.moveStrafe != 0F);
+    }
+
+    /**
+     * Has motion boolean.
+     *
+     * @return the boolean
+     */
+    public static boolean hasMotion() {
+        return mc.thePlayer.motionX != 0D && mc.thePlayer.motionZ != 0D && mc.thePlayer.motionY != 0D;
+    }
+
+    private static float getMoveYaw() {
+        final EntityPlayerSP player = mc.thePlayer;
+        float moveYaw = player.rotationYaw;
+
+        if (player.moveForward != 0F && player.moveStrafing == 0F) {
+            moveYaw += (player.moveForward > 0) ? 0 : 180;
+        } else if (player.moveForward != 0F) {
+            if (player.moveForward > 0) {
+                moveYaw += (player.moveStrafing > 0) ? -45 : 45;
+            } else {
+                moveYaw -= (player.moveStrafing > 0) ? -45 : 45;
+            }
+            moveYaw += (player.moveForward > 0) ? 0 : 180;
+        } else if (player.moveStrafing != 0F) {
+            moveYaw += (player.moveStrafing > 0) ? -90 : 90;
+        }
+
+        return moveYaw;
+    }
+
+    /**
+     * Strafe.
+     *
+     * @param speed the speed
+     */
+    public static void strafe(final float speed) {
+        final double shotSpeed = Math.sqrt((mc.thePlayer.motionX * mc.thePlayer.motionX) + (mc.thePlayer.motionZ * mc.thePlayer.motionZ));
+        final double fixSpeed = (shotSpeed * 1);
+        final double motionX = (mc.thePlayer.motionX * (0));
+        final double motionZ = (mc.thePlayer.motionZ * (0));
+
+        if (!isMoving()) {
+            mc.thePlayer.motionX = 0.0;
+            mc.thePlayer.motionZ = 0.0;
+            return;
+        }
+
+        final float yaw = getMoveYaw();
+        mc.thePlayer.motionX = (((-Math.sin(Math.toRadians(yaw)) * fixSpeed) + motionX));
+        mc.thePlayer.motionZ = (((Math.cos(Math.toRadians(yaw)) * fixSpeed) + motionZ));
+
+        mc.thePlayer.motionX = -Math.sin(getDirection()) * speed;
+        mc.thePlayer.motionZ = Math.cos(getDirection()) * speed;
+    }
+
+    /**
+     * Forward.
+     *
+     * @param length the length
+     */
+    public static void forward(final double length) {
+        final double yaw = Math.toRadians(mc.thePlayer.rotationYaw);
+        mc.thePlayer.setPosition(mc.thePlayer.posX + (-Math.sin(yaw) * length), mc.thePlayer.posY, mc.thePlayer.posZ + (Math.cos(yaw) * length));
     }
 
     /**
@@ -98,126 +229,6 @@ public final class MovementUtils extends MinecraftInstance {
     }
 
     /**
-     * Strafe.
-     */
-    public static void strafe() {
-        strafe(getSpeed());
-    }
-
-    /**
-     * Strafe.
-     *
-     * @param speed the speed
-     */
-    public static void strafe(final float speed) {
-        final double shotSpeed = Math.sqrt((mc.thePlayer.motionX * mc.thePlayer.motionX) + (mc.thePlayer.motionZ * mc.thePlayer.motionZ));
-        final double fixSpeed = (shotSpeed * 1);
-        final double motionX = (mc.thePlayer.motionX * (0));
-        final double motionZ = (mc.thePlayer.motionZ * (0));
-
-        if (!isMoving()) {
-            mc.thePlayer.motionX = 0.0;
-            mc.thePlayer.motionZ = 0.0;
-            return;
-        }
-
-        final float yaw = getMoveYaw();
-        mc.thePlayer.motionX = (((-Math.sin(Math.toRadians(yaw)) * fixSpeed) + motionX));
-        mc.thePlayer.motionZ = (((Math.cos(Math.toRadians(yaw)) * fixSpeed) + motionZ));
-
-        mc.thePlayer.motionX = -Math.sin(getDirection()) * speed;
-        mc.thePlayer.motionZ = Math.cos(getDirection()) * speed;
-    }
-
-    /**
-     * Gets speed.
-     *
-     * @return the speed
-     */
-    public static float getSpeed() {
-        return (float) getSpeed(mc.thePlayer.motionX, mc.thePlayer.motionZ);
-    }
-
-    public static void setSpeed(final double moveSpeed) {
-        setSpeed(moveSpeed, mc.thePlayer.rotationYaw, mc.thePlayer.movementInput.moveStrafe, mc.thePlayer.movementInput.moveForward);
-    }
-
-    public static void setSpeed(final double moveSpeed, float yaw, double strafe, double forward) {
-        if (forward != 0.0D) {
-            if (strafe > 0.0D) {
-                yaw += ((forward > 0.0D) ? -45 : 45);
-            } else if (strafe < 0.0D) {
-                yaw += ((forward > 0.0D) ? 45 : -45);
-            }
-            strafe = 0.0D;
-            if (forward > 0.0D) {
-                forward = 1.0D;
-            } else if (forward < 0.0D) {
-                forward = -1.0D;
-            }
-        }
-        if (strafe > 0.0D) {
-            strafe = 1.0D;
-        } else if (strafe < 0.0D) {
-            strafe = -1.0D;
-        }
-        final double mx = Math.cos(Math.toRadians((yaw + 90.0F)));
-        final double mz = Math.sin(Math.toRadians((yaw + 90.0F)));
-        mc.thePlayer.motionX = forward * moveSpeed * mx + strafe * moveSpeed * mz;
-        mc.thePlayer.motionZ = forward * moveSpeed * mz - strafe * moveSpeed * mx;
-    }
-
-    private static float getMoveYaw() {
-        final EntityPlayerSP player = mc.thePlayer;
-        float moveYaw = player.rotationYaw;
-
-        if (player.moveForward != 0F && player.moveStrafing == 0F) {
-            moveYaw += (player.moveForward > 0) ? 0 : 180;
-        } else if (player.moveForward != 0F) {
-            if (player.moveForward > 0) {
-                moveYaw += (player.moveStrafing > 0) ? -45 : 45;
-            } else {
-                moveYaw -= (player.moveStrafing > 0) ? -45 : 45;
-            }
-            moveYaw += (player.moveForward > 0) ? 0 : 180;
-        } else if (player.moveStrafing != 0F) {
-            moveYaw += (player.moveStrafing > 0) ? -90 : 90;
-        }
-
-        return moveYaw;
-    }
-
-    /**
-     * Gets speed.
-     *
-     * @param motionX the motion x
-     * @param motionZ the motion z
-     * @return the speed
-     */
-    public static double getSpeed(final double motionX, final double motionZ) {
-        return Math.sqrt(motionX * motionX + motionZ * motionZ);
-    }
-
-    /**
-     * Has motion boolean.
-     *
-     * @return the boolean
-     */
-    public static boolean hasMotion() {
-        return mc.thePlayer.motionX != 0D && mc.thePlayer.motionZ != 0D && mc.thePlayer.motionY != 0D;
-    }
-
-    /**
-     * Forward.
-     *
-     * @param length the length
-     */
-    public static void forward(final double length) {
-        final double yaw = Math.toRadians(mc.thePlayer.rotationYaw);
-        mc.thePlayer.setPosition(mc.thePlayer.posX + (-Math.sin(yaw) * length), mc.thePlayer.posY, mc.thePlayer.posZ + (Math.cos(yaw) * length));
-    }
-
-    /**
      * Gets speed effect.
      *
      * @return the speed effect
@@ -253,17 +264,6 @@ public final class MovementUtils extends MinecraftInstance {
             baseSpeed *= 1.0 + 0.2 * (amplifier + 1);
         }
         return baseSpeed;
-    }
-
-    /**
-     * Is on ice boolean.
-     *
-     * @return the boolean
-     */
-    public static boolean isOnIce() {
-        final EntityPlayerSP player = mc.thePlayer;
-        final Block blockUnder = mc.theWorld.getBlockState(new BlockPos(player.posX, player.posY - 1.0, player.posZ)).getBlock();
-        return blockUnder instanceof BlockIce || blockUnder instanceof BlockPackedIce;
     }
 
     /**

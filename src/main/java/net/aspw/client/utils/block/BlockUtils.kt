@@ -1,14 +1,13 @@
 package net.aspw.client.utils.block
 
+import kotlin.math.floor
 import net.aspw.client.utils.MinecraftInstance
 import net.minecraft.block.Block
 import net.minecraft.block.material.Material
 import net.minecraft.block.state.IBlockState
 import net.minecraft.util.AxisAlignedBB
 import net.minecraft.util.BlockPos
-import net.minecraft.util.MathHelper
 import net.minecraft.util.Vec3
-import kotlin.math.floor
 
 object BlockUtils : MinecraftInstance() {
 
@@ -95,18 +94,9 @@ object BlockUtils : MinecraftInstance() {
      */
     @JvmStatic
     fun collideBlock(axisAlignedBB: AxisAlignedBB, collide: (Block?) -> Boolean): Boolean {
-        for (x in MathHelper.floor_double(mc.thePlayer.entityBoundingBox.minX) until
-                MathHelper.floor_double(mc.thePlayer.entityBoundingBox.maxX) + 1) {
-            for (z in MathHelper.floor_double(mc.thePlayer.entityBoundingBox.minZ) until
-                    MathHelper.floor_double(mc.thePlayer.entityBoundingBox.maxZ) + 1) {
-                val block = getBlock(BlockPos(x.toDouble(), axisAlignedBB.minY, z.toDouble()))
-
-                if (!collide(block))
-                    return false
-            }
+        return mc.theWorld.getCollisionBoxes(axisAlignedBB).stream().anyMatch { cBB ->
+            collide.invoke(getBlock(BlockPos(cBB.minX, cBB.minY, cBB.minZ)))
         }
-
-        return true
     }
 
     /**
@@ -114,23 +104,13 @@ object BlockUtils : MinecraftInstance() {
      */
     @JvmStatic
     fun collideBlockIntersects(axisAlignedBB: AxisAlignedBB, collide: (Block?) -> Boolean): Boolean {
-        for (x in MathHelper.floor_double(mc.thePlayer.entityBoundingBox.minX) until
-                MathHelper.floor_double(mc.thePlayer.entityBoundingBox.maxX) + 1) {
-            for (z in MathHelper.floor_double(mc.thePlayer.entityBoundingBox.minZ) until
-                    MathHelper.floor_double(mc.thePlayer.entityBoundingBox.maxZ) + 1) {
-                val blockPos = BlockPos(x.toDouble(), axisAlignedBB.minY, z.toDouble())
-                val block = getBlock(blockPos)
-
-                if (collide(block)) {
-                    val boundingBox = block?.getCollisionBoundingBox(mc.theWorld, blockPos, getState(blockPos))
-                        ?: continue
-
-                    if (mc.thePlayer.entityBoundingBox.intersectsWith(boundingBox))
-                        return true
-                }
-            }
+        return mc.theWorld.getCollisionBoxes(axisAlignedBB).stream().anyMatch { aABB ->
+            val pos = BlockPos(aABB.minX, aABB.minY, aABB.minZ)
+            val block = getBlock(pos)
+            collide.invoke(block) &&
+                    block?.getCollisionBoundingBox(mc.theWorld, pos, getState(pos))
+                        ?.intersectsWith(axisAlignedBB) ?: false
         }
-        return false
     }
 
     @JvmStatic
